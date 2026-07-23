@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # The document root on this host is the project root, but every
+    # web-facing file (build assets, favicon, front controller) lives
+    # under public/. Route all requests into public/ so real static
+    # files are served directly and public/.htaccess handles the
+    # Laravel front controller.
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+
+</IfModule>
