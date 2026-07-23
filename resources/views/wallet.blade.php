@@ -12,6 +12,12 @@
     <a href="{{ route('home') }}" class="btn btn-primary pressable" style="padding:9px 14px;font-size:13px"><x-icon name="search" size="16px" /> رحلة جديدة</a>
 </div>
 
+<a href="{{ route('stats') }}" class="card card-hover animate-in" style="padding:14px 16px;display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit;margin-bottom:16px">
+    <span style="width:40px;height:40px;border-radius:12px;background:var(--brand-tint);color:var(--brand);display:grid;place-items:center;flex:none"><x-icon name="star" size="22px" /></span>
+    <div style="flex:1"><div style="font-weight:700;font-size:14px">رحلاتي وإنجازاتي</div><div style="font-size:12px;color:var(--ink-soft)">إحصائيات سفرك وشارات الإنجاز</div></div>
+    <x-icon name="chevron" size="16px" style="color:var(--ink-faint)" />
+</a>
+
 <div id="wallet-list" class="stagger"></div>
 
 {{-- حالة فاضية --}}

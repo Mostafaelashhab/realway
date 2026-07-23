@@ -35,7 +35,7 @@
         #rail-loading.show { display:flex; animation: fadeInUp .2s var(--tap) both; }
     </style>
 
-    <header style="position:sticky;top:0;z-index:40;background:color-mix(in srgb, var(--bg) 82%, transparent);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--border)">
+    <header style="position:sticky;top:0;z-index:40;background:color-mix(in srgb, var(--bg) 82%, transparent);backdrop-filter:saturate(1.4) blur(14px);border-bottom:1px solid var(--border);padding-top:env(safe-area-inset-top,0)">
         <div class="mx-auto flex items-center gap-3" style="max-width:960px;padding:12px 18px">
             <a href="{{ route('home') }}" class="flex items-center gap-2" style="font-weight:800;font-size:18px;letter-spacing:-.02em;color:var(--ink)">
                 <span style="display:grid;place-items:center;width:34px;height:34px;border-radius:11px;background:var(--brand);color:#fff">

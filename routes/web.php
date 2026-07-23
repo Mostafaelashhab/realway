@@ -11,4 +11,5 @@ Route::get('/train/{number}', [SearchController::class, 'train'])->name('train')
 Route::get('/station/{id}', [SearchController::class, 'station'])->name('station');
 Route::get('/route/{from}/{to}', [SearchController::class, 'routePage'])->name('route.page');
 Route::view('/wallet', 'wallet')->name('wallet');
+Route::view('/stats', 'stats')->name('stats');
 Route::view('/offline', 'offline')->name('offline');

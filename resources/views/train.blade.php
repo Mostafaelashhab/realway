@@ -105,8 +105,16 @@
         'price'     => rtrim(rtrim(number_format($trip->start_price, 2), '0'), '.'),
         'url'       => $tripUrl,
     ];
+    $journeyData = [
+        'train'       => $number,
+        'fromName'    => optional($fromStation)->name_ar,
+        'toName'      => optional($toStation)->name_ar,
+        'km'          => (int) $trip->distance_km,
+        'durationMin' => (int) $trip->duration_min,
+        'date'        => $date,
+    ];
 @endphp
-<div style="display:flex;gap:10px">
+<div style="display:flex;gap:10px;margin-bottom:10px">
     <button type="button" class="btn btn-primary btn-block pressable" onclick='saveToWallet(@json($walletData))'>
         <x-icon name="ticket" size="16px" /> احفظ في محفظتي
     </button>
@@ -114,6 +122,9 @@
         <x-icon name="route" size="16px" />
     </button>
 </div>
+<button type="button" class="btn btn-ghost btn-block pressable" onclick='logJourney(@json($journeyData))'>
+    <x-icon name="check" size="16px" /> سجّلت الرحلة دي (تضاف لإحصائياتك)
+</button>
 
 @push('overlays')
     @include('partials.share-sheet')

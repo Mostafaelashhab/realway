@@ -581,6 +581,101 @@ window.renderWallet = function () {
         </div>`).join('');
 };
 
+/* ============ رحلاتي وإنجازاتي (Wrapped) ============ */
+const JOURNEYS_KEY = 'egtrain-journeys';
+
+window.logJourney = function (trip) {
+    const list = readStore(JOURNEYS_KEY);
+    list.unshift(trip);
+    writeStore(JOURNEYS_KEY, list.slice(0, 500));
+    showToast('اتسجّلت الرحلة في إحصائياتك');
+};
+
+function computeStats() {
+    const j = readStore(JOURNEYS_KEY);
+    const stations = new Set();
+    let km = 0, mins = 0;
+    const routeCount = {}, routeName = {};
+    let longest = null;
+    j.forEach((t) => {
+        km += +t.km || 0;
+        mins += +t.durationMin || 0;
+        if (t.fromName) stations.add(t.fromName);
+        if (t.toName) stations.add(t.toName);
+        const key = t.fromName + '→' + t.toName;
+        routeCount[key] = (routeCount[key] || 0) + 1;
+        routeName[key] = t.fromName + ' ← ' + t.toName;
+        if (!longest || (+t.km || 0) > (+longest.km || 0)) longest = t;
+    });
+    let favKey = null, favMax = 0;
+    for (const k in routeCount) if (routeCount[k] > favMax) { favMax = routeCount[k]; favKey = k; }
+    return {
+        trips: j.length, km: Math.round(km), stations: stations.size, hours: Math.round(mins / 60),
+        favorite: favKey ? routeName[favKey] : null,
+        longest: longest ? { name: longest.fromName + ' ← ' + longest.toName, km: Math.round(+longest.km || 0) } : null,
+    };
+}
+
+const ACHIEVEMENTS = [
+    { icon: 'star', title: 'أول رحلة', test: (s) => s.trips >= 1 },
+    { icon: 'train', title: '٥ رحلات', test: (s) => s.trips >= 5 },
+    { icon: 'train', title: 'رحّالة (١٠)', test: (s) => s.trips >= 10 },
+    { icon: 'star', title: 'خبير السكة (٢٥)', test: (s) => s.trips >= 25 },
+    { icon: 'tag', title: '١٠٠٠ كم', test: (s) => s.km >= 1000 },
+    { icon: 'tag', title: '٥٠٠٠ كم', test: (s) => s.km >= 5000 },
+    { icon: 'pin', title: '٥ محطات', test: (s) => s.stations >= 5 },
+    { icon: 'pin', title: '١٥ محطة', test: (s) => s.stations >= 15 },
+    { icon: 'clock', title: '٢٤ ساعة سفر', test: (s) => s.hours >= 24 },
+];
+
+let lastStats = null;
+window.renderStats = function () {
+    const wrap = document.getElementById('stats-wrap');
+    if (!wrap) return;
+    const s = computeStats();
+    lastStats = s;
+    document.getElementById('stats-empty').style.display = s.trips ? 'none' : 'block';
+    wrap.style.display = s.trips ? 'block' : 'none';
+    document.getElementById('share-stats-btn').style.display = s.trips ? 'inline-flex' : 'none';
+    if (!s.trips) return;
+
+    document.getElementById('st-trips').textContent = s.trips;
+    document.getElementById('st-km').textContent = s.km;
+    document.getElementById('st-stations').textContent = s.stations;
+    document.getElementById('st-hours').textContent = s.hours;
+    document.getElementById('st-route').textContent = s.favorite || '—';
+    document.getElementById('st-longest').textContent = s.longest ? (s.longest.name + ' · ' + s.longest.km + ' كم') : '—';
+
+    document.getElementById('achievements').innerHTML = ACHIEVEMENTS.map((a) => {
+        const on = a.test(s);
+        return `<div class="card" style="padding:14px 8px;text-align:center;${on ? '' : 'opacity:.4'}">
+            <div style="width:38px;height:38px;border-radius:12px;display:grid;place-items:center;margin:0 auto 6px;background:${on ? 'var(--brand-tint)' : 'var(--surface-2)'};color:${on ? 'var(--brand)' : 'var(--ink-faint)'}">${jsIcon(a.icon, 20)}</div>
+            <div style="font-size:11px;font-weight:600">${a.title}</div>
+        </div>`;
+    }).join('');
+};
+
+window.shareStats = function () {
+    const s = lastStats || computeStats();
+    const text = `رحلاتي على القطر: ${s.trips} رحلة · ${s.km} كم · زرت ${s.stations} محطة\n\nعبر EgTrain`;
+    document.getElementById('share-preview').innerHTML =
+        `<div style="font-weight:800;font-size:16px;margin-bottom:8px">رحلاتي على القطر</div>
+         <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:14px;font-weight:700">
+            <span>${jsIcon('train',15)} ${s.trips} رحلة</span><span>${jsIcon('tag',15)} ${s.km} كم</span><span>${jsIcon('pin',15)} ${s.stations} محطة</span>
+         </div>`;
+    const enc = encodeURIComponent(text + '\n' + location.origin);
+    document.getElementById('share-wa').href = 'https://wa.me/?text=' + enc;
+    document.getElementById('share-tg').href = 'https://t.me/share/url?url=' + encodeURIComponent(location.origin) + '&text=' + encodeURIComponent(text);
+    document.getElementById('share-fb').href = 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(location.origin);
+    document.getElementById('share-copy').onclick = () => { navigator.clipboard?.writeText(text); showToast('اتنسخ'); };
+    const nb = document.getElementById('share-native');
+    if (navigator.share) { nb.style.display = ''; nb.onclick = () => navigator.share({ title: 'EgTrain', text }).catch(() => {}); }
+    else { nb.style.display = 'none'; }
+    document.getElementById('share-backdrop').classList.add('open');
+    document.getElementById('share-sheet').classList.add('open');
+    document.body.style.overflow = 'hidden';
+};
+
 /* ============ PWA: service worker + تثبيت ============ */
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
@@ -607,6 +702,7 @@ window.addEventListener('appinstalled', () => { showToast('اتثبّت EgTrain 
 document.addEventListener('DOMContentLoaded', () => {
     renderQuickRoutes();
     renderWallet();
+    renderStats();
     initTrainLottie();
     initResultsFilters();
 

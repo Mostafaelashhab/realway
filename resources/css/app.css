@@ -146,6 +146,13 @@ body {
     }
     .input::placeholder { color: var(--ink-faint); font-weight: 400; }
     .input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-tint); }
+    /* يسمح للحقل إنه يصغّر جوه flex بدل ما يخرج بره الكارت */
+    .input { min-width: 0; max-width: 100%; }
+    /* تطبيع منتقي التاريخ/الوقت عشان الأيقونة متخرجش (خصوصًا RTL) */
+    input[type="date"].input, input[type="time"].input { -webkit-appearance: none; appearance: none; position: relative; }
+    input[type="date"].input::-webkit-date-and-time-value { text-align: start; margin: 0; }
+    input[type="date"].input::-webkit-calendar-picker-indicator,
+    input[type="time"].input::-webkit-calendar-picker-indicator { margin-inline-start: auto; margin-inline-end: 0; }
 
     .card {
         background: var(--surface); border: 1px solid var(--border);
