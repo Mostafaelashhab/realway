@@ -206,6 +206,8 @@ window.showToast = function (msg) {
 window.showRailLoader = function () {
     const el = document.getElementById('rail-loading');
     if (el) el.classList.add('show');
+    // ابدأ القطر من أوله كل مرة (بدل ما يفضل واقف في آخر إطار)
+    if (trainAnim) { try { trainAnim.resize(); trainAnim.goToAndPlay(0, true); } catch (e) {} }
 };
 window.hideRailLoader = function () {
     document.getElementById('rail-loading')?.classList.remove('show');
