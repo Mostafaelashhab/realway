@@ -1,4 +1,27 @@
+import lottie from 'lottie-web/build/player/lottie_light';
+
 /* ============ EgTrain — تفاعلات الواجهة ============ */
+
+/* --- أنيميشن القطر (Lottie) --- */
+let trainAnim = null;
+let trainLoaded = false;
+function initTrainLottie() {
+    if (trainLoaded) return;
+    const c = document.getElementById('lottie-train');
+    if (!c) return;
+    trainLoaded = true;
+    fetch('/lottie/train.json')
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then((data) => {
+            trainAnim = lottie.loadAnimation({ container: c, renderer: 'svg', loop: true, autoplay: true, animationData: data });
+        })
+        .catch(() => {
+            // Lottie فشل → رجّع للـ SVG الاحتياطي
+            c.style.display = 'none';
+            const fb = document.getElementById('rail-fallback');
+            if (fb) fb.style.display = 'block';
+        });
+}
 
 /* --- الوضع الداكن --- */
 window.toggleTheme = function () {
@@ -214,6 +237,7 @@ window.addEventListener('pageshow', hideRailLoader);
 
 document.addEventListener('DOMContentLoaded', () => {
     renderQuickRoutes();
+    initTrainLottie();
 
     // احفظ آخر بحث عند الإرسال + أظهر شاشة التحميل
     document.querySelectorAll('form[data-search-form]').forEach((form) => {

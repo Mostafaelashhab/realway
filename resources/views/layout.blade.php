@@ -49,6 +49,9 @@
         @yield('content')
     </main>
 
+    {{-- الـ overlays (منتقي المحطة...) على مستوى body عشان الـ position:fixed يشتغل صح --}}
+    @stack('overlays')
+
     <footer class="mx-auto" style="max-width:960px;padding:24px 18px 40px;text-align:center;color:var(--ink-faint);font-size:12px">
         <div class="flex items-center justify-center gap-1.5" style="margin-bottom:4px">
             <x-icon name="train" size="16px" /> EgTrain

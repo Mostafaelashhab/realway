@@ -226,7 +226,9 @@ body {
 }
 [dir="rtl"] .rail-loader svg { transform: scaleX(-1); }
 
-.page-enter { animation: fadeInUp .4s var(--tap) both; }
+@keyframes fadeInOnly { from { opacity: 0; } to { opacity: 1; } }
+/* opacity بس — عشان الـ transform ميكسرش أي position:fixed جوه main */
+.page-enter { animation: fadeInOnly .35s var(--tap) both; }
 
 /* ============ الـ Sheet / Modal المخصّص ============ */
 .sheet-backdrop {

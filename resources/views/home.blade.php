@@ -83,5 +83,7 @@
     </div>
 </div>
 
-@include('partials.station-picker', ['stations' => $stations])
+@push('overlays')
+    @include('partials.station-picker', ['stations' => $stations])
+@endpush
 @endsection
