@@ -116,7 +116,7 @@
                     <button type="button" class="btn btn-ghost btn-icon pressable"
                             onclick='shareTrip(@json($shareData))'
                             aria-label="مشاركة"><x-icon name="route" size="16px" /></button>
-                    <a href="{{ route('live-seats', ['train' => $t->train_number, 'from' => $from, 'to' => $to, 'date' => $date]) }}"
+                    <a href="{{ route('seats', ['train' => $t->train_number, 'from' => $from, 'to' => $to, 'date' => $date]) }}"
                        class="btn btn-accent pressable" style="padding:9px 14px;font-size:13px"><x-icon name="ticket" size="16px" /> كرسي</a>
                 </div>
             </div>

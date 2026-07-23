@@ -48,8 +48,9 @@
         </div>
     </div>
 
-    <p style="font-size:12px;color:var(--ink-faint);margin-top:12px;display:flex;align-items:center;gap:6px">
-        <x-icon name="info" size="14px" /> ده التخطيط. التوفّر اللحظي بييجي من زر "اختار كرسي" في رحلة فعلية.
+    <p style="font-size:12px;color:var(--ink-faint);margin-top:12px;display:flex;gap:6px;align-items:flex-start;line-height:1.6">
+        <x-icon name="info" size="14px" style="margin-top:2px;flex:none" />
+        <span>التخطيط ده للاسترشاد فقط عشان تفهم شكل العربية. توفّر الكراسي الفعلي بيعتمد على نظام الحجز الرسمي للسكة الحديد.</span>
     </p>
 </div>
 

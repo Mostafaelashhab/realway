@@ -62,7 +62,7 @@
 
 {{-- الدرجات والأسعار --}}
 <div class="card animate-in" style="padding:20px;margin-bottom:14px">
-    <h2 style="font-size:15px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:6px"><x-icon name="seat" size="18px" /> الدرجات المتاحة</h2>
+    <h2 style="font-size:15px;font-weight:800;margin-bottom:14px;display:flex;align-items:center;gap:6px"><x-icon name="seat" size="18px" /> درجات القطر</h2>
     <div style="display:flex;flex-direction:column;gap:8px">
         @forelse ($classes as $c)
             <div class="flex items-center" style="gap:10px;padding:12px 14px;background:var(--surface-2);border-radius:14px">
@@ -78,7 +78,7 @@
     </div>
     <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
         <div><span style="font-size:12px;color:var(--ink-soft)">يبدأ من</span> <span style="font-size:20px;font-weight:800">{{ rtrim(rtrim(number_format($trip->start_price,2),'0'),'.') }}</span> <span style="font-size:13px;color:var(--ink-soft)">جنيه</span></div>
-        <a href="{{ route('live-seats', ['train' => $number, 'from' => $trip->from_id, 'to' => $trip->to_id, 'date' => $date]) }}" class="btn btn-accent pressable"><x-icon name="ticket" size="16px" /> اختار كرسي</a>
+        <a href="{{ route('seats', ['train' => $number, 'from' => $trip->from_id, 'to' => $trip->to_id, 'date' => $date]) }}" class="btn btn-accent pressable"><x-icon name="ticket" size="16px" /> اختار كرسي</a>
     </div>
 </div>
 

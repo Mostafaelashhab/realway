@@ -56,7 +56,11 @@
         <div class="flex items-center justify-center gap-1.5" style="margin-bottom:4px">
             <x-icon name="train" size="16px" /> EgTrain
         </div>
-        قطارات مصر — بضمير الركّاب · {{ \App\Models\Station::count() }} محطة · {{ \App\Models\Train::count() }} قطر
+        <div style="margin-bottom:6px">قطارات مصر — بضمير الركّاب · {{ \App\Models\Station::count() }} محطة · {{ \App\Models\Train::count() }} قطر</div>
+        <div style="max-width:44ch;margin:0 auto;line-height:1.6;opacity:.85">
+            تطبيق <b>مستقل وغير رسمي</b> ومش تابع للهيئة القومية لسكك حديد مصر.
+            المواعيد استرشادية وقد تتغير — الحجز والتأكيد من المصدر الرسمي.
+        </div>
     </footer>
 </body>
 </html>

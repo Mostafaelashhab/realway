@@ -139,48 +139,49 @@ class SearchController extends Controller
         ]);
     }
 
-    /** الكراسي الحية — on-demand من ENR، مكاش دقايق، degradable. */
-    public function liveSeats(Request $request, EnrClient $client)
+    /**
+     * تخطيط الكراسي — ثابت للتخطيط فقط (من الداتا المحلية).
+     * مفيش توفّر لحظي ولا أي نداء حي — بيوضّح شكل العربية بس.
+     */
+    public function seats(Request $request)
     {
         $train = (string) $request->query('train', '');
         $from  = (string) $request->query('from', '');
         $to    = (string) $request->query('to', '');
         $date  = (string) $request->query('date', now()->addDay()->toDateString());
-        $coachId = (string) $request->query('coach', '');
+        $selClass = (string) $request->query('coach', '');
 
         $fromStation = Station::find($from);
         $toStation   = Station::find($to);
 
-        // نداء ENR مكاش لـ 3 دقايق (نفس البحث لكل الركّاب)
-        $raw = Cache::remember(
-            "enr:search:$from:$to:$date",
-            now()->addMinutes(3),
-            fn () => $client->search($from, $to, $date)
-        );
+        $trainModel = Train::with('coachClasses')->where('number', $train)->first();
 
-        $trips = EnrNormalizer::searchResults($raw);
-        $trip = collect($trips)->firstWhere('train_number', $train);
+        // درجات القطر → تخطيط عربية تمثيلي لكل درجة (من coach_type_seats الثابتة)
+        $coaches = ($trainModel?->coachClasses ?? collect())->map(function (CoachClass $c) {
+            $ct = CoachType::with('seats')->where('coach_class_id', $c->id)->has('seats')->first();
+            if (! $ct) {
+                return null;
+            }
+            $seats = $ct->seats->sortBy([['row_index', 'asc'], ['x', 'asc']])->values();
 
-        // degradable: لو ENR وقع أو القطر مش موجود → رجّع للتخطيط الثابت
-        if (! $trip || empty($trip['coaches'])) {
-            return view('live-seats', [
-                'unavailable' => true,
-                'train' => $train, 'from' => $from, 'to' => $to, 'date' => $date,
-                'fromStation' => $fromStation, 'toStation' => $toStation,
-                'coaches' => [], 'selected' => null,
-            ]);
-        }
+            return [
+                'class_id'     => $c->id,
+                'label'        => $c->label_ar ?: $c->name_ar,
+                'class_ar'     => $c->name_ar,
+                'ac'           => str_contains((string) $c->name_ar, 'مكيف'),
+                'type_name'    => $ct->name_ar,
+                'seats_count'  => $ct->seats_count ?: $seats->count(),
+                'window_count' => $seats->where('is_window', true)->count(),
+                'seats'        => $seats,
+            ];
+        })->filter()->values();
 
-        $coaches = collect($trip['coaches'])->filter(fn ($c) => ! empty($c['seats']))->values();
-        $selected = $coaches->firstWhere('id', $coachId) ?: $coaches->first();
+        $selected = $coaches->firstWhere('class_id', $selClass) ?: $coaches->first();
 
-        return view('live-seats', [
-            'unavailable' => false,
+        return view('seats', [
             'train' => $train, 'from' => $from, 'to' => $to, 'date' => $date,
             'fromStation' => $fromStation, 'toStation' => $toStation,
-            'trip' => $trip,
-            'coaches' => $coaches,
-            'selected' => $selected,
+            'coaches' => $coaches, 'selected' => $selected,
         ]);
     }
 
