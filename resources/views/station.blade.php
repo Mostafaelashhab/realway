@@ -58,6 +58,8 @@
 </div>
 @endif
 
+<livewire:community scope-type="station" :scope-key="$station->id" title="نصايح وأسئلة عن المحطة" />
+
 <p style="font-size:12px;color:var(--ink-faint);text-align:center;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:6px">
     <x-icon name="info" size="13px" /> الخريطة والموقع الجغرافي قريبًا
 </p>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CoachClass;
+use App\Models\CommunityPost;
 use App\Models\CoachType;
 use App\Models\Station;
 use App\Models\Train;
@@ -243,6 +244,7 @@ class SearchController extends Controller
             'date'        => $date,
             'fromStation' => Station::find($trip->from_id),
             'toStation'   => Station::find($trip->to_id),
+            'posts'       => CommunityPost::forScope('train', $number),
         ]);
     }
 
@@ -282,6 +284,7 @@ class SearchController extends Controller
             'date'        => $date,
             'from'        => $from,
             'to'          => $to,
+            'posts'       => CommunityPost::forScope('route', "$from-$to"),
         ]);
     }
 
@@ -325,6 +328,7 @@ class SearchController extends Controller
             'popularRoutes' => $popularRoutes,
             'departures'    => $departures,
             'date'          => $date,
+            'posts'         => CommunityPost::forScope('station', $station->id),
         ]);
     }
 

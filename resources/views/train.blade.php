@@ -126,6 +126,10 @@
     <x-icon name="check" size="16px" /> سجّلت الرحلة دي (تضاف لإحصائياتك)
 </button>
 
+<div style="margin-top:14px">
+    <livewire:community scope-type="train" :scope-key="$number" title="نصايح وأسئلة عن القطر" />
+</div>
+
 @push('overlays')
     @include('partials.share-sheet')
 @endpush

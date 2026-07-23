@@ -21,6 +21,7 @@
         })();
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
 </head>
 <body>
     {{-- شاشة تحميل القطر (overlay) --}}
@@ -71,5 +72,6 @@
             المواعيد استرشادية وقد تتغير — الحجز والتأكيد من المصدر الرسمي.
         </div>
     </footer>
+    @livewireScripts
 </body>
 </html>

@@ -96,6 +96,8 @@
     </div>
 </div>
 
+<livewire:community scope-type="route" :scope-key="$from.'-'.$to" title="نصايح الركّاب على الخط" />
+
 {{-- JSON-LD للـ SEO --}}
 <script type="application/ld+json">
 {!! json_encode([
