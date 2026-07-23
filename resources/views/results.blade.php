@@ -18,9 +18,13 @@
 <div class="flex items-center justify-between" style="margin-bottom:12px">
     <div>
         <h1 style="font-size:20px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:8px">
-            {{ optional($fromStation)->name_ar ?? 'محطة' }}
-            <x-icon name="arrow-l" size="18px" style="color:var(--accent)" />
-            {{ optional($toStation)->name_ar ?? 'محطة' }}
+            @if ($fromStation && $toStation)
+                <a href="{{ route('route.page', ['from' => $from, 'to' => $to]) }}" style="text-decoration:none;color:inherit;display:flex;align-items:center;gap:8px">
+                    {{ $fromStation->name_ar }} <x-icon name="arrow-l" size="18px" style="color:var(--accent)" /> {{ $toStation->name_ar }}
+                </a>
+            @else
+                محطة <x-icon name="arrow-l" size="18px" style="color:var(--accent)" /> محطة
+            @endif
         </h1>
         <p style="color:var(--ink-soft);font-size:13px;margin-top:2px">
             {{ \Carbon\Carbon::parse($date)->translatedFormat('l j F') }} · <span id="trip-count">{{ $trips->count() }}</span> قطر

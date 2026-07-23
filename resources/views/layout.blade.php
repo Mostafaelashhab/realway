@@ -4,6 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#12336b">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="EgTrain">
     <title>@yield('title', 'EgTrain — قطارات مصر')</title>
     {{-- ظبط الثيم قبل الرسم (منع الوميض) --}}
     <script>
@@ -38,7 +43,11 @@
                 </span>
                 EgTrain
             </a>
-            <button type="button" onclick="toggleTheme()" class="btn btn-ghost btn-icon" aria-label="تبديل الوضع الليلي" style="margin-inline-start:auto">
+            <button type="button" id="install-btn" onclick="installApp()" class="btn btn-primary pressable" style="margin-inline-start:auto;display:none;padding:9px 14px;font-size:13px">
+                <x-icon name="bolt" size="16px" /> ثبّت التطبيق
+            </button>
+            <a href="{{ route('wallet') }}" class="btn btn-ghost btn-icon pressable" aria-label="محفظة رحلاتي" style="margin-inline-start:auto"><x-icon name="ticket" /></a>
+            <button type="button" onclick="toggleTheme()" class="btn btn-ghost btn-icon" aria-label="تبديل الوضع الليلي">
                 <span class="block dark:hidden"><x-icon name="moon" /></span>
                 <span class="hidden dark:block"><x-icon name="sun" /></span>
             </button>

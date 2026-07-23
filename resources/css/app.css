@@ -345,6 +345,14 @@ body {
 /* highlight البحث في المنتقي */
 .picker-row mark { background: var(--accent-tint); color: var(--accent-strong); border-radius: 4px; padding: 0 2px; }
 
+/* أزرار مجزّأة (وضع البحث) */
+.seg-btn {
+    flex: 1; padding: 10px; border-radius: 9px; border: none; cursor: pointer;
+    background: transparent; color: var(--ink-soft); font-size: 14px; font-weight: 600;
+    transition: background .15s, color .15s;
+}
+.seg-btn.seg-active { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
+
 /* بطاقة في وضع المقارنة */
 .trip-card.is-comparing { box-shadow: 0 0 0 2px var(--accent), var(--shadow); }
 .compare-btn.chip-active { background: var(--accent); color: #fff; border-color: var(--accent); }

@@ -69,6 +69,15 @@ class SearchController extends Controller
             ->map(fn (Trip $t) => $this->decorateTrip($t))
             ->values();
 
+        // وضع "أوصل قبل": نفلتر القطارات اللي بتوصل قبل الوقت المطلوب، الأقرب للهدف الأول
+        $arriveBy = (string) $request->query('arrive_by', '');
+        if ($arriveBy !== '') {
+            $trips = $trips
+                ->filter(fn ($r) => optional($r['trip']->arrive_at)->format('H:i') <= $arriveBy)
+                ->sortByDesc(fn ($r) => optional($r['trip']->arrive_at)->format('H:i'))
+                ->values();
+        }
+
         [$recommendedTrain, $reasons] = $this->recommend($trips);
 
         return view('results', [
@@ -82,6 +91,7 @@ class SearchController extends Controller
             'liveFetched'      => $liveFetched,
             'recommendedTrain' => $recommendedTrain,
             'recommendReasons' => $reasons,
+            'arriveBy'         => $arriveBy,
         ]);
     }
 
@@ -234,6 +244,52 @@ class SearchController extends Controller
             'fromStation' => Station::find($trip->from_id),
             'toStation'   => Station::find($trip->to_id),
         ]);
+    }
+
+    /** صفحة الخط (SEO) — ملخص + إحصائيات + FAQ لكل زوج محطات. */
+    public function routePage(string $from, string $to, EnrClient $client, TripImporter $importer)
+    {
+        $fromStation = Station::findOrFail($from);
+        $toStation   = Station::findOrFail($to);
+        $date = now()->addDay()->toDateString();
+
+        $trips = Trip::where('from_id', $from)->where('to_id', $to)->get();
+
+        // مفيش داتا؟ نجيبها مرة (cached) عشان الصفحة تكون قيّمة للزوار ومحركات البحث
+        if ($trips->isEmpty() && $from !== $to) {
+            $raw = Cache::remember("enr:search:$from:$to:$date", now()->addMinutes(30),
+                fn () => $client->search($from, $to, $date));
+            $importer->storeMany(EnrNormalizer::searchResults($raw), $date);
+            $trips = Trip::where('from_id', $from)->where('to_id', $to)->get();
+        }
+
+        $unique = $trips->unique('train_number')->sortBy('depart_at')->values();
+
+        $stats = [
+            'count'     => $unique->count(),
+            'fastest'   => $unique->min('duration_min'),
+            'cheapest'  => $unique->min('start_price'),
+            'priciest'  => $unique->max('start_price'),
+            'distance'  => (int) $unique->max('distance_km'),
+            'has_ac'    => $unique->contains(fn ($t) => $this->trainIsAc($t->train_number)),
+        ];
+
+        return view('route', [
+            'fromStation' => $fromStation,
+            'toStation'   => $toStation,
+            'trains'      => $unique->map(fn (Trip $t) => $this->decorateTrip($t)),
+            'stats'       => $stats,
+            'date'        => $date,
+            'from'        => $from,
+            'to'          => $to,
+        ]);
+    }
+
+    private function trainIsAc(string $number): bool
+    {
+        $train = Train::with('coachClasses')->where('number', $number)->first();
+
+        return ($train?->coachClasses ?? collect())->contains(fn ($c) => str_contains((string) $c->name_ar, 'مكيف'));
     }
 
     /** صفحة المحطة. */

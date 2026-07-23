@@ -12,6 +12,8 @@ const JS_ICONS = {
     clock: '<circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/>',
     tag: '<path d="M4 13V5a1 1 0 0 1 1-1h8l7 7-9 9-7-7Z"/>',
     check: '<path d="m5 12 4 4L19 7"/>',
+    ticket: '<path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/>',
+    trash: '<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
 };
 function jsIcon(name, size = 16, style = '') {
     return `<svg viewBox="0 0 24 24" style="width:${size}px;height:${size}px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;${style}" aria-hidden="true">${JS_ICONS[name] || ''}</svg>`;
@@ -499,8 +501,112 @@ window.closeCompare = function () {
     document.body.style.overflow = '';
 };
 
+/* وضع البحث: قيام / أوصل قبل */
+window.setSearchMode = function (mode) {
+    const arrive = mode === 'arrive';
+    document.getElementById('mode-depart')?.classList.toggle('seg-active', !arrive);
+    document.getElementById('mode-arrive')?.classList.toggle('seg-active', arrive);
+    const wrap = document.getElementById('arrive-wrap');
+    const input = document.getElementById('arrive_by');
+    if (wrap) wrap.style.display = arrive ? '' : 'none';
+    if (input) { input.disabled = !arrive; if (arrive && !input.value) input.value = '18:00'; }
+};
+
+/* ============ محفظة الرحلات + تذكيرات ============ */
+const WALLET_KEY = 'egtrain-wallet';
+
+window.saveToWallet = function (trip) {
+    let list = readStore(WALLET_KEY);
+    if (list.some((t) => t.id === trip.id)) { showToast('الرحلة محفوظة عندك بالفعل'); return; }
+    list.unshift(trip);
+    writeStore(WALLET_KEY, list.slice(0, 50));
+    showToast('اتحفظت في محفظتك');
+};
+window.removeFromWallet = function (id) {
+    writeStore(WALLET_KEY, readStore(WALLET_KEY).filter((t) => t.id !== id));
+    renderWallet();
+    showToast('اتشالت من المحفظة');
+};
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+function to12(hm) {
+    if (!hm) return '';
+    const [h, m] = hm.split(':').map(Number);
+    return (h % 12 || 12) + ':' + pad2(m) + ' ' + (h < 12 ? 'ص' : 'م');
+}
+
+// أضف للتقويم — .ics موثوق (نظام التشغيل بيتكفّل بالتنبيه)
+window.addToCalendar = function (trip) {
+    const dt = (trip.date + 'T' + (trip.depart24 || '08:00') + ':00').replace(/[-:]/g, '');
+    const end = (trip.date + 'T' + (trip.arrive24 || trip.depart24 || '09:00') + ':00').replace(/[-:]/g, '');
+    const ics = [
+        'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//EgTrain//AR', 'BEGIN:VEVENT',
+        'UID:egtrain-' + trip.id + '@egtrain',
+        'DTSTART;TZID=Africa/Cairo:' + dt,
+        'DTEND;TZID=Africa/Cairo:' + end,
+        'SUMMARY:قطر ' + trip.train + ' — ' + trip.fromName + ' ← ' + trip.toName,
+        'DESCRIPTION:رحلة قطار عبر EgTrain (استرشادي — الحجز من المصدر الرسمي).',
+        'BEGIN:VALARM', 'TRIGGER:-PT45M', 'ACTION:DISPLAY', 'DESCRIPTION:رحلتك بعد 45 دقيقة', 'END:VALARM',
+        'END:VEVENT', 'END:VCALENDAR',
+    ].join('\r\n');
+    const blob = new Blob([ics], { type: 'text/calendar' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'egtrain-' + trip.train + '.ics';
+    a.click();
+    showToast('اتضافت للتقويم مع تنبيه قبلها بـ ٤٥ دقيقة');
+};
+
+window.renderWallet = function () {
+    const box = document.getElementById('wallet-list');
+    if (!box) return;
+    const list = readStore(WALLET_KEY);
+    document.getElementById('wallet-empty').style.display = list.length ? 'none' : 'block';
+    box.innerHTML = list.map((t) => `
+        <div class="card" style="padding:16px;margin-bottom:12px">
+            <div class="flex items-center" style="justify-content:space-between;gap:8px;margin-bottom:10px">
+                <div style="font-weight:800;font-size:15px">${t.fromName} <span style="color:var(--accent)">←</span> ${t.toName}</div>
+                <span class="badge badge-brand">${jsIcon('train',13)} ${t.train}</span>
+            </div>
+            <div class="flex items-center" style="gap:14px;color:var(--ink-soft);font-size:13px;margin-bottom:12px">
+                <span>${jsIcon('clock',14)} ${to12(t.depart24)} - ${to12(t.arrive24)}</span>
+                <span>${t.dateLabel || t.date}</span>
+                ${t.price ? '<span>'+jsIcon('tag',14)+' من '+t.price+' ج</span>' : ''}
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <a href="${t.url}" class="btn btn-accent pressable" style="padding:8px 12px;font-size:13px">${jsIcon('ticket',15)} افتح</a>
+                <button type="button" class="btn btn-ghost pressable" style="padding:8px 12px;font-size:13px" onclick='addToCalendar(${JSON.stringify(t).replace(/'/g,"&#39;")})'>${jsIcon('clock',15)} أضف للتقويم</button>
+                <button type="button" class="btn btn-ghost pressable" style="padding:8px 12px;font-size:13px;margin-inline-start:auto;color:var(--error)" onclick="removeFromWallet('${t.id}')">${jsIcon('trash',15)}</button>
+            </div>
+        </div>`).join('');
+};
+
+/* ============ PWA: service worker + تثبيت ============ */
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+
+let deferredInstall = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstall = e;
+    const btn = document.getElementById('install-btn');
+    if (btn) btn.style.display = 'inline-flex';
+});
+window.installApp = function () {
+    if (!deferredInstall) return;
+    deferredInstall.prompt();
+    deferredInstall.userChoice.finally(() => {
+        deferredInstall = null;
+        const btn = document.getElementById('install-btn');
+        if (btn) btn.style.display = 'none';
+    });
+};
+window.addEventListener('appinstalled', () => { showToast('اتثبّت EgTrain على جهازك'); });
+
 document.addEventListener('DOMContentLoaded', () => {
     renderQuickRoutes();
+    renderWallet();
     initTrainLottie();
     initResultsFilters();
 

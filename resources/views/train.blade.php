@@ -83,6 +83,7 @@
 </div>
 
 @php
+    $tripUrl = route('train', ['number' => $number, 'from' => $trip->from_id, 'to' => $trip->to_id, 'date' => $date]);
     $shareData = [
         'train'  => $number,
         'from'   => optional($fromStation)->name_ar,
@@ -90,12 +91,29 @@
         'depart' => $trip->departLabel(),
         'arrive' => $trip->arriveLabel(),
         'price'  => rtrim(rtrim(number_format($trip->start_price, 2), '0'), '.'),
-        'url'    => route('train', ['number' => $number, 'from' => $trip->from_id, 'to' => $trip->to_id, 'date' => $date]),
+        'url'    => $tripUrl,
+    ];
+    $walletData = [
+        'id'        => $number.'-'.$trip->from_id.'-'.$trip->to_id,
+        'train'     => $number,
+        'fromName'  => optional($fromStation)->name_ar,
+        'toName'    => optional($toStation)->name_ar,
+        'date'      => $date,
+        'dateLabel' => \Carbon\Carbon::parse($date)->translatedFormat('l j F'),
+        'depart24'  => optional($trip->depart_at)->format('H:i'),
+        'arrive24'  => optional($trip->arrive_at)->format('H:i'),
+        'price'     => rtrim(rtrim(number_format($trip->start_price, 2), '0'), '.'),
+        'url'       => $tripUrl,
     ];
 @endphp
-<button type="button" class="btn btn-ghost btn-block pressable" onclick='shareTrip(@json($shareData))'>
-    <x-icon name="route" size="16px" /> شارك الرحلة
-</button>
+<div style="display:flex;gap:10px">
+    <button type="button" class="btn btn-primary btn-block pressable" onclick='saveToWallet(@json($walletData))'>
+        <x-icon name="ticket" size="16px" /> احفظ في محفظتي
+    </button>
+    <button type="button" class="btn btn-ghost pressable" onclick='shareTrip(@json($shareData))' aria-label="مشاركة">
+        <x-icon name="route" size="16px" />
+    </button>
+</div>
 
 @push('overlays')
     @include('partials.share-sheet')

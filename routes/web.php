@@ -9,3 +9,6 @@ Route::get('/coach/{coachType}', [SearchController::class, 'coach'])->name('coac
 Route::get('/seats', [SearchController::class, 'seats'])->name('seats');
 Route::get('/train/{number}', [SearchController::class, 'train'])->name('train');
 Route::get('/station/{id}', [SearchController::class, 'station'])->name('station');
+Route::get('/route/{from}/{to}', [SearchController::class, 'routePage'])->name('route.page');
+Route::view('/wallet', 'wallet')->name('wallet');
+Route::view('/offline', 'offline')->name('offline');
