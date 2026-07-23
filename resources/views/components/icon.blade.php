@@ -26,6 +26,17 @@
         'route'    => '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.5 6H15a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h.5"/>',
         'ticket'   => '<path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2 2 2 0 0 0 0 4 2 2 0 0 1-2 2H6a2 2 0 0 1-2-2 2 2 0 0 0 0-4Z"/><path d="M14 6v12" stroke-dasharray="2 2"/>',
         'bolt'     => '<path d="M13 3 4 14h6l-1 7 9-11h-6l1-7Z"/>',
+        'tag'      => '<path d="M4 13V5a1 1 0 0 1 1-1h8l7 7-9 9-7-7Z"/><circle cx="8.5" cy="8.5" r="1.2" fill="currentColor" stroke="none"/>',
+        'snow'     => '<path d="M12 2v20M3 7l18 10M21 7 3 17"/><path d="M9.5 4 12 6l2.5-2M9.5 20 12 18l2.5 2"/>',
+        'sunrise'  => '<path d="M12 3v5M5.6 10.6 4.2 9.2M18.4 10.6l1.4-1.4M3 18h18M7 18a5 5 0 0 1 10 0M9 6l3-3 3 3"/>',
+        'sort'     => '<path d="M7 4v16M7 20l-3-3M7 4l3 3M17 20V4M17 4l3 3M17 20l-3-3"/>',
+        'chat'     => '<path d="M21 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20.5l1.6-5A8.5 8.5 0 1 1 21 11.5Z"/>',
+        'send'     => '<path d="M21 4 3 11l6 2 2 6 3-4 4 3 3-14Z"/>',
+        'facebook' => '<path d="M13 22v-8h2.5l.5-3H13V9.2c0-.9.3-1.5 1.6-1.5H16V5.1C15.7 5 14.8 5 13.8 5 11.6 5 10 6.3 10 8.9V11H7.5v3H10v8Z" fill="currentColor" stroke="none"/>',
+        'link'     => '<path d="M9 12a3 3 0 0 1 3-3h3a3 3 0 0 1 0 6h-1"/><path d="M15 12a3 3 0 0 1-3 3H9a3 3 0 0 1 0-6h1"/>',
+        'copy'     => '<rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 9V5.5A1.5 1.5 0 0 0 13.5 4H5.5A1.5 1.5 0 0 0 4 5.5v8A1.5 1.5 0 0 0 5.5 15H9"/>',
+        'trash'    => '<path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13"/>',
+        'pin-on'   => '<path d="M9 4h6l-1 6 3 3v2h-5v5l-1 1-1-1v-5H4v-2l3-3-1-6Z" fill="currentColor" stroke="none"/>',
     ];
     $inner = $paths[$name] ?? '';
     $style = trim(($size ? "width:$size;height:$size;" : '').($attributes->get('style') ?? ''));

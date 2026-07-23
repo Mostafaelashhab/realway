@@ -10,7 +10,7 @@ class Trip extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'train_number', 'from_id', 'to_id', 'weekday', 'sample_date',
+        'train_number', 'train_type', 'from_id', 'to_id', 'weekday', 'sample_date',
         'depart_at', 'arrive_at', 'duration_min', 'distance_km',
         'start_price', 'stops_count', 'harvested_at',
     ];

@@ -58,7 +58,7 @@
     <div class="field-label" style="display:flex;align-items:center;gap:6px">
         <x-icon name="clock" size="16px" /> عمليات بحث أخيرة
     </div>
-    <div id="recent-routes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    <div id="recent-routes" class="recent-scroll" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:6px"></div>
 </div>
 
 {{-- خطوط مقترحة --}}

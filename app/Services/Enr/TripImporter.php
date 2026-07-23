@@ -42,6 +42,7 @@ class TripImporter
                 ],
                 [
                     'sample_date'  => $date,
+                    'train_type'   => $t['train_type'] ?? null,
                     'depart_at'    => $t['depart'],
                     'arrive_at'    => $t['arrive'],
                     'duration_min' => $t['duration_min'],
