@@ -72,10 +72,24 @@ form.card { padding:18px; }
 .field { margin-bottom:13px; }
 .field:last-of-type { margin-bottom:17px; }
 label.lbl { display:block; font-size:12.5px; font-weight:600; color:var(--ink-3); margin-bottom:6px; letter-spacing:.01em; }
+.lbl-hint { font-weight:500; color:var(--brand-ink); }
 input, select {
-    width:100%; padding:12px 13px; font:inherit; font-size:16px; color:var(--ink);
+    width:100%; max-width:100%; min-width:0; height:52px; padding:12px 13px;
+    font:inherit; font-size:16px; line-height:1.5; color:var(--ink);
     background:var(--bg); border:1px solid var(--line); border-radius:12px; transition:border-color .15s, box-shadow .15s;
 }
+
+/* حقل التاريخ: iOS بيرسمه بمقاس داخلي بتاعه ويطلع بره الكارت — بنصفّر رسم النظام */
+/* التاريخ نفسه مكتوب لاتيني (18/09/2026)، فالحقل بيتعامل كصندوق LTR:
+   القيمة على الشمال والأيقونة على اليمين — والمعنى العربي في اللابل فوقيه. */
+input[type="date"] {
+    appearance:none; -webkit-appearance:none; direction:ltr; text-align:left;
+}
+input[type="date"]::-webkit-date-and-time-value { text-align:start; margin:0; padding:0; }
+input[type="date"]::-webkit-datetime-edit { padding:0; line-height:1.5; }
+input[type="date"]::-webkit-datetime-edit-fields-wrapper { padding:0; }
+input[type="date"]::-webkit-calendar-picker-indicator { margin:0; padding:0; opacity:.45; cursor:pointer; }
+input[type="date"]::-webkit-inner-spin-button, input[type="date"]::-webkit-clear-button { display:none; }
 select {
     appearance:none; padding-inline-end:38px;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b95a5' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");

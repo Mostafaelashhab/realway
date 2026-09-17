@@ -1,3 +1,4 @@
+@php use App\Support\Ar; @endphp
 {{-- بحث مشترك بين الرئيسية وصفحة النتايج. بيشتغل من غير جافاسكريبت (datalist)،
      والسكربت تحت بيرقّيه لقايمة منسّقة + loader وقت الإرسال. --}}
 <div class="tabs">
@@ -23,7 +24,7 @@
             </div>
         </div>
         <div class="field">
-            <label class="lbl" for="d1">التاريخ</label>
+            <label class="lbl" for="d1">التاريخ <span class="lbl-hint" data-date-hint>{{ Ar::date($date) }}</span></label>
             <input type="date" name="date" id="d1" value="{{ $date }}" min="{{ $minDate }}">
         </div>
         <button type="submit"><span class="btn-label">ابحث</span></button>
@@ -36,7 +37,7 @@
                    placeholder="903" value="{{ $number }}" required>
         </div>
         <div class="field">
-            <label class="lbl" for="d2">التاريخ</label>
+            <label class="lbl" for="d2">التاريخ <span class="lbl-hint" data-date-hint>{{ Ar::date($date) }}</span></label>
             <input type="date" name="date" id="d2" value="{{ $date }}" min="{{ $minDate }}">
         </div>
         <button type="submit"><span class="btn-label">ابحث</span></button>
@@ -152,6 +153,23 @@
             button.classList.add('is-loading');
             button.querySelector('.btn-label').textContent = 'بندوّر على القطارات…';
             document.body.classList.add('busy');
+        });
+    });
+
+    // الهينت العربي جنب "التاريخ" يمشي مع الحقل
+    var DAYS = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+    var MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+    function arNum(n) { return String(n).replace(/[0-9]/g, function (d) { return '٠١٢٣٤٥٦٧٨٩'[+d]; }); }
+
+    document.querySelectorAll('input[type=date]').forEach(function (input) {
+        var hint = input.closest('.field').querySelector('[data-date-hint]');
+        if (!hint) return;
+        input.addEventListener('change', function () {
+            var parts = input.value.split('-');
+            if (parts.length !== 3) { hint.textContent = ''; return; }
+            var d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+            hint.textContent = DAYS[d.getDay()] + ' ' + arNum(d.getDate()) + ' ' +
+                MONTHS[d.getMonth()] + ' ' + arNum(d.getFullYear());
         });
     });
 
