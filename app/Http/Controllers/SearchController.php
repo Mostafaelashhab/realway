@@ -2,371 +2,149 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CoachClass;
-use App\Models\CommunityPost;
-use App\Models\CoachType;
 use App\Models\Station;
-use App\Models\Train;
-use App\Models\Trip;
 use App\Services\Enr\EnrClient;
 use App\Services\Enr\EnrNormalizer;
-use App\Services\Enr\TripImporter;
+use App\Support\Ar;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller
 {
     public function home()
     {
         return view('home', [
-            'stations' => $this->stationList(),
-            'cairo'    => '606534187276566625',
-            'alex'     => '606535384603557938',
-            'date'     => now()->addDay()->toDateString(),
+            'stations' => $this->stations(),
+            'date'     => now()->toDateString(),
         ]);
     }
 
-    public function search(Request $request, EnrClient $client, TripImporter $importer)
+    /** بحث من محطة لمحطة. */
+    public function search(Request $request, EnrClient $client)
     {
         $from = (string) $request->query('from', '');
         $to   = (string) $request->query('to', '');
-        $date = (string) $request->query('date', now()->addDay()->toDateString());
+        $date = $this->date($request);
 
-        $fromStation = Station::find($from);
-        $toStation   = Station::find($to);
-
-        // الجدول أسبوعي — نبحث حسب يوم الأسبوع (السبت زي كل سبت)
-        $weekday = \Carbon\Carbon::parse($date)->dayOfWeek; // 0=الأحد .. 6=السبت
-        $query = fn () => Trip::query()
-            ->where('from_id', $from)
-            ->where('to_id', $to)
-            ->where('weekday', $weekday)
-            ->orderBy('depart_at')
-            ->get();
-
-        $all = $query();
-
-        // مش محفوظ لليوم ده من الأسبوع، أو الجدول قديم؟ → هات من ENR وخزّنه لليوم ده
-        $stale = $all->isNotEmpty()
-            && $all->max('harvested_at')
-            && \Carbon\Carbon::parse($all->max('harvested_at'))->lt(now()->subDays(14));
-
-        $liveFetched = false;
-        if (($all->isEmpty() || $stale) && $from !== '' && $to !== '' && $from !== $to) {
-            $raw = Cache::remember(
-                "enr:search:$from:$to:$date",
-                now()->addMinutes(10),
-                fn () => $client->search($from, $to, $date)
-            );
-            $importer->storeMany(EnrNormalizer::searchResults($raw), $date);
-            $fresh = $query();
-            if ($fresh->isNotEmpty()) {
-                $liveFetched = $all->isEmpty(); // مؤشر "اتجاب دلوقتي" للخط الجديد بس
-                $all = $fresh;
-            }
+        $error = null;
+        if ($from === '' || $to === '') {
+            $error = 'اختار محطة القيام ومحطة الوصول.';
+        } elseif ($from === $to) {
+            $error = 'المحطتين واحدة — غيّر واحدة منهم.';
         }
 
-        $trips = $all->unique('train_number')
-            ->map(fn (Trip $t) => $this->decorateTrip($t))
-            ->values();
+        $trains = $error ? [] : $this->live($client, $from, $to, $date);
 
-        // وضع "أوصل قبل": نفلتر القطارات اللي بتوصل قبل الوقت المطلوب، الأقرب للهدف الأول
-        $arriveBy = (string) $request->query('arrive_by', '');
-        if ($arriveBy !== '') {
-            $trips = $trips
-                ->filter(fn ($r) => optional($r['trip']->arrive_at)->format('H:i') <= $arriveBy)
-                ->sortByDesc(fn ($r) => optional($r['trip']->arrive_at)->format('H:i'))
-                ->values();
+        if (! $error && ! $trains) {
+            $error = 'مفيش قطارات على الخط ده في التاريخ ده.';
         }
-
-        [$recommendedTrain, $reasons] = $this->recommend($trips);
 
         return view('results', [
-            'stations'         => $this->stationList(),
-            'from'             => $from,
-            'to'               => $to,
-            'date'             => $date,
-            'fromStation'      => $fromStation,
-            'toStation'        => $toStation,
-            'trips'            => $trips,
-            'liveFetched'      => $liveFetched,
-            'recommendedTrain' => $recommendedTrain,
-            'recommendReasons' => $reasons,
-            'arriveBy'         => $arriveBy,
+            'title' => 'قطارات '.$this->name($from).' ← '.$this->name($to),
+            'date'  => $date,
+            'trains' => $trains,
+            'error'  => $error,
         ]);
     }
 
-    /**
-     * الترشيح الذكي: يختار أفضل رحلة (أسرع/أرخص/أقل محطات متوازنة) ويشرح ليه.
-     * يرجّع [رقم القطر المرشّح، أسباب[]].
-     */
-    private function recommend($trips): array
+    /** بحث برقم القطر — بنجيب خطه من الداتا المحلية وبعدين نسأل ENR عليه. */
+    public function train(Request $request, EnrClient $client)
     {
-        if ($trips->count() < 2) {
-            return [null, []];
-        }
+        $number = trim(Ar::west((string) $request->query('number', '')));
+        $date   = $this->date($request);
 
-        $minD = $trips->min('duration'); $maxD = $trips->max('duration');
-        $minP = $trips->min('price'); $maxP = $trips->max('price');
-        $minS = $trips->min('stops'); $maxS = $trips->max('stops');
+        $error  = null;
+        $trains = [];
 
-        $norm = fn ($v, $lo, $hi) => $hi > $lo ? ($v - $lo) / ($hi - $lo) : 0;
-
-        // درجة أقل = أفضل (الوقت أهم، بعده السعر، بعده المحطات)
-        $best = $trips->sortBy(fn ($t) => 0.55 * $norm($t['duration'], $minD, $maxD)
-            + 0.30 * $norm($t['price'], $minP, $maxP)
-            + 0.15 * $norm($t['stops'], $minS, $maxS))->first();
-
-        $reasons = [];
-        if ($best['duration'] <= $minD) {
-            $reasons[] = 'الأسرع على الخط';
-        } elseif (($maxD - $best['duration']) >= 10) {
-            $reasons[] = 'يوفّر '.($maxD - $best['duration']).' دقيقة عن الأبطأ';
-        }
-        if ($best['price'] <= $minP) {
-            $reasons[] = 'الأرخص كمان';
+        if ($number === '') {
+            $error = 'اكتب رقم القطر.';
         } else {
-            $diff = (int) round($best['price'] - $minP);
-            if ($diff > 0 && $diff <= 40) {
-                $reasons[] = 'أغلى بـ '.$diff.' جنيه بس عن الأرخص';
+            // أطول خط معروف للقطر ده (عشان نجيب كل محطاته)
+            $route = DB::table('trips')
+                ->where('train_number', $number)
+                ->orderByDesc('stops_count')
+                ->first(['from_id', 'to_id']);
+
+            if (! $route) {
+                $error = 'القطر رقم '.Ar::num($number).' مش موجود في الداتا — جرّب البحث بالمحطات.';
+            } else {
+                $trains = array_values(array_filter(
+                    $this->live($client, $route->from_id, $route->to_id, $date),
+                    fn ($t) => $t['number'] === $number
+                ));
+
+                if (! $trains) {
+                    $error = 'القطر رقم '.Ar::num($number).' مش مشغّل في التاريخ ده.';
+                }
             }
         }
-        if ($best['stops'] <= $minS && $maxS > $minS) {
-            $reasons[] = 'أقل عدد وقفات';
-        }
 
-        return [$best['trip']->train_number, array_slice($reasons, 0, 3)];
-    }
-
-    public function coach(CoachType $coachType)
-    {
-        $coachType->load('seats', 'coachClass');
-        $seats = $coachType->seats->sortBy([['row_index', 'asc'], ['x', 'asc']])->values();
-
-        return view('coach', [
-            'coach'      => $coachType,
-            'seats'      => $seats,
-            'windowOpen' => $seats->where('is_window', true)->count(),
+        return view('results', [
+            'title' => $number === '' ? 'بحث برقم القطر' : 'قطر رقم '.Ar::num($number),
+            'date'  => $date,
+            'trains' => $trains,
+            'error'  => $error,
         ]);
     }
 
     /**
-     * تخطيط الكراسي — ثابت للتخطيط فقط (من الداتا المحلية).
-     * مفيش توفّر لحظي ولا أي نداء حي — بيوضّح شكل العربية بس.
+     * نداء ENR الحي + تسمية المحطات من الداتا المحلية.
+     * الكاش دقيقتين — الكراسي الفاضية بتتغيّر بسرعة.
      */
-    public function seats(Request $request)
+    private function live(EnrClient $client, string $from, string $to, string $date): array
     {
-        $train = (string) $request->query('train', '');
-        $from  = (string) $request->query('from', '');
-        $to    = (string) $request->query('to', '');
-        $date  = (string) $request->query('date', now()->addDay()->toDateString());
-        $selClass = (string) $request->query('coach', '');
-
-        $fromStation = Station::find($from);
-        $toStation   = Station::find($to);
-
-        $trainModel = Train::with('coachClasses')->where('number', $train)->first();
-
-        // درجات القطر → تخطيط عربية تمثيلي لكل درجة (من coach_type_seats الثابتة)
-        $coaches = ($trainModel?->coachClasses ?? collect())->map(function (CoachClass $c) {
-            $ct = CoachType::with('seats')->where('coach_class_id', $c->id)->has('seats')->first();
-            if (! $ct) {
-                return null;
-            }
-            $seats = $ct->seats->sortBy([['row_index', 'asc'], ['x', 'asc']])->values();
-
-            return [
-                'class_id'     => $c->id,
-                'label'        => $c->label_ar ?: $c->name_ar,
-                'class_ar'     => $c->name_ar,
-                'ac'           => str_contains((string) $c->name_ar, 'مكيف'),
-                'type_name'    => $ct->name_ar,
-                'seats_count'  => $ct->seats_count ?: $seats->count(),
-                'window_count' => $seats->where('is_window', true)->count(),
-                'seats'        => $seats,
-            ];
-        })->filter()->values();
-
-        $selected = $coaches->firstWhere('class_id', $selClass) ?: $coaches->first();
-
-        return view('seats', [
-            'train' => $train, 'from' => $from, 'to' => $to, 'date' => $date,
-            'fromStation' => $fromStation, 'toStation' => $toStation,
-            'coaches' => $coaches, 'selected' => $selected,
-        ]);
-    }
-
-    /** صفحة تفاصيل القطر. */
-    public function train(Request $request, string $number)
-    {
-        $from = (string) $request->query('from', '');
-        $to   = (string) $request->query('to', '');
-        $date = (string) $request->query('date', now()->addDay()->toDateString());
-        $weekday = \Carbon\Carbon::parse($date)->dayOfWeek;
-
-        $trip = Trip::where('train_number', $number)
-            ->when($from && $to, fn ($q) => $q->where('from_id', $from)->where('to_id', $to))
-            ->where('weekday', $weekday)->first()
-            ?? Trip::where('train_number', $number)->orderByDesc('stops_count')->first();
-
-        abort_if(! $trip, 404);
-
-        $train = Train::with('coachClasses')->where('number', $number)->first();
-
-        // محطات الروت بالترتيب + أسماؤها
-        $stations = Station::whereIn('id', $trip->stops->pluck('station_id'))->get()->keyBy('id');
-        $stops = $trip->stops->map(fn ($s) => [
-            'id'    => $s->station_id,
-            'name'  => optional($stations->get($s->station_id))->name_ar ?? '—',
-            'code'  => optional($stations->get($s->station_id))->code,
-            'seq'   => $s->sequence,
-        ]);
-
-        $classes = ($train?->coachClasses ?? collect())->map(function (CoachClass $c) {
-            $coachType = CoachType::where('coach_class_id', $c->id)->has('seats')->first();
-
-            return [
-                'label'      => $c->label_ar ?: $c->name_ar,
-                'name'       => $c->name_ar,
-                'ac'         => str_contains((string) $c->name_ar, 'مكيف'),
-                'coach_type' => $coachType?->id,
-            ];
-        });
-
-        return view('train', [
-            'trip'        => $trip,
-            'number'      => $number,
-            'train'       => $train,
-            'stops'       => $stops,
-            'classes'     => $classes,
-            'from'        => $from,
-            'to'          => $to,
-            'date'        => $date,
-            'fromStation' => Station::find($trip->from_id),
-            'toStation'   => Station::find($trip->to_id),
-            'posts'       => CommunityPost::forScope('train', $number),
-        ]);
-    }
-
-    /** صفحة الخط (SEO) — ملخص + إحصائيات + FAQ لكل زوج محطات. */
-    public function routePage(string $from, string $to, EnrClient $client, TripImporter $importer)
-    {
-        $fromStation = Station::findOrFail($from);
-        $toStation   = Station::findOrFail($to);
-        $date = now()->addDay()->toDateString();
-
-        $trips = Trip::where('from_id', $from)->where('to_id', $to)->get();
-
-        // مفيش داتا؟ نجيبها مرة (cached) عشان الصفحة تكون قيّمة للزوار ومحركات البحث
-        if ($trips->isEmpty() && $from !== $to) {
-            $raw = Cache::remember("enr:search:$from:$to:$date", now()->addMinutes(30),
-                fn () => $client->search($from, $to, $date));
-            $importer->storeMany(EnrNormalizer::searchResults($raw), $date);
-            $trips = Trip::where('from_id', $from)->where('to_id', $to)->get();
+        if ($from === '' || $to === '' || $from === $to) {
+            return [];
         }
 
-        $unique = $trips->unique('train_number')->sortBy('depart_at')->values();
+        $raw = Cache::remember(
+            "enr:$from:$to:$date",
+            now()->addMinutes(2),
+            fn () => $client->search($from, $to, $date)
+        );
 
-        $stats = [
-            'count'     => $unique->count(),
-            'fastest'   => $unique->min('duration_min'),
-            'cheapest'  => $unique->min('start_price'),
-            'priciest'  => $unique->max('start_price'),
-            'distance'  => (int) $unique->max('distance_km'),
-            'has_ac'    => $unique->contains(fn ($t) => $this->trainIsAc($t->train_number)),
-        ];
+        $trains = EnrNormalizer::trains($raw);
+        if (! $trains) {
+            return [];
+        }
 
-        return view('route', [
-            'fromStation' => $fromStation,
-            'toStation'   => $toStation,
-            'trains'      => $unique->map(fn (Trip $t) => $this->decorateTrip($t)),
-            'stats'       => $stats,
-            'date'        => $date,
-            'from'        => $from,
-            'to'          => $to,
-            'posts'       => CommunityPost::forScope('route', "$from-$to"),
-        ]);
+        $ids = collect($trains)
+            ->flatMap(fn ($t) => [...$t['route_ids'], $t['from_id'], $t['to_id']])
+            ->filter()->unique()->all();
+        $names = Station::whereIn('id', $ids)->pluck('name_ar', 'id');
+
+        foreach ($trains as &$t) {
+            $t['stops'] = array_map(fn ($id) => $names[$id] ?? '—', $t['route_ids']);
+            $t['from']  = $names[$t['from_id']] ?? '—';
+            $t['to']    = $names[$t['to_id']] ?? '—';
+        }
+        unset($t);
+
+        usort($trains, fn ($a, $b) => ($a['depart'] ?? '') <=> ($b['depart'] ?? ''));
+
+        return $trains;
     }
 
-    private function trainIsAc(string $number): bool
+    private function date(Request $request): string
     {
-        $train = Train::with('coachClasses')->where('number', $number)->first();
+        $date = (string) $request->query('date', '');
 
-        return ($train?->coachClasses ?? collect())->contains(fn ($c) => str_contains((string) $c->name_ar, 'مكيف'));
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) ? $date : now()->toDateString();
     }
 
-    /** صفحة المحطة. */
-    public function station(string $id)
+    private function name(string $id): string
     {
-        $station = Station::findOrFail($id);
-        $date = now()->addDay()->toDateString();
-
-        // وجهات مشهورة من المحطة دي (حسب عدد الرحلات)
-        $routeRows = Trip::where('from_id', $id)
-            ->selectRaw('to_id, count(*) as c')
-            ->groupBy('to_id')->orderByDesc('c')->limit(10)->get();
-        $destNames = Station::whereIn('id', $routeRows->pluck('to_id'))->get()->keyBy('id');
-        $popularRoutes = $routeRows->map(fn ($r) => [
-            'to'   => $r->to_id,
-            'name' => optional($destNames->get($r->to_id))->name_ar ?? '—',
-        ])->filter(fn ($r) => $r['name'] !== '—')->values();
-
-        // لوحة المواعيد: قطارات القيام من هنا
-        $depRows = Trip::where('from_id', $id)->orderBy('depart_at')->get()
-            ->unique(fn ($t) => $t->train_number.'-'.$t->to_id)->take(25);
-        $depDests = Station::whereIn('id', $depRows->pluck('to_id'))->get()->keyBy('id');
-        $departures = $depRows->map(fn ($t) => [
-            'train'  => $t->train_number,
-            'to'     => $t->to_id,
-            'toName' => optional($depDests->get($t->to_id))->name_ar ?? '—',
-            'depart' => Trip::time12($t->depart_at),
-            'date'   => $date,
-        ])->values();
-
-        return view('station', [
-            'station'       => $station,
-            'popularRoutes' => $popularRoutes,
-            'departures'    => $departures,
-            'date'          => $date,
-            'posts'         => CommunityPost::forScope('station', $station->id),
-        ]);
+        return $this->stations()[$id] ?? '—';
     }
 
-    /** يضيف بيانات القطر ودرجاته لكل رحلة. */
-    private function decorateTrip(Trip $trip): array
+    /** كل المحطات كـ [id => الاسم] — بنكاش قيم عادية مش موديلات. */
+    private function stations(): array
     {
-        $train = Train::with('coachClasses')->where('number', $trip->train_number)->first();
-
-        // نوع عربية تمثيلي لكل درجة (عشان نلينك لخريطة الكراسي)
-        $classes = ($train?->coachClasses ?? collect())->map(function (CoachClass $c) {
-            $coachType = CoachType::where('coach_class_id', $c->id)->has('seats')->first();
-
-            return [
-                'label'      => $c->label_ar ?: $c->name_ar,
-                'name'       => $c->name_ar,
-                'coach_type' => $coachType?->id,
-            ];
-        });
-
-        $isAc = $classes->contains(fn ($c) => str_contains((string) $c['name'], 'مكيف'));
-
-        return [
-            'trip'     => $trip,
-            'classes'  => $classes,
-            // بيانات الفلترة والترشيح
-            'is_ac'    => $isAc,
-            'price'    => (float) $trip->start_price,
-            'duration' => (int) $trip->duration_min,
-            'stops'    => (int) $trip->stops_count,
-            'depart'   => optional($trip->depart_at)->format('H:i') ?? '',
-            'type'     => $trip->train_type,
-        ];
-    }
-
-    private function stationList()
-    {
-        return Station::where('active', true)
+        return Cache::remember('stations', now()->addHour(), fn () => Station::where('active', true)
+            ->whereNotNull('name_ar')
             ->orderBy('name_ar')
-            ->get(['id', 'name_ar', 'code']);
+            ->pluck('name_ar', 'id')
+            ->all());
     }
 }

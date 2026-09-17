@@ -166,6 +166,97 @@ class EnrNormalizer
         return $trips;
     }
 
+    /**
+     * تطبيع رد البحث للعرض المبسّط: لكل قطر → اسمه، مواعيده، سعر البداية،
+     * درجاته بأسعارها، الكراسي الفاضية بأرقامها لكل عربية، ومحطات الروت.
+     */
+    public static function trains(array $response): array
+    {
+        $trains = [];
+
+        foreach ($response as $option) {
+            foreach (($option['steps'] ?? []) as $step) {
+                $train  = $step['train'] ?? [];
+                $number = (string) ($train['name'] ?? '');
+                if ($number === '' || isset($trains[$number])) {
+                    continue;
+                }
+
+                $trains[$number] = [
+                    'number'       => $number,
+                    'name'         => self::trainName($train),
+                    'from_id'      => (string) ($step['fromId'] ?? ''),
+                    'to_id'        => (string) ($step['toId'] ?? ''),
+                    'depart'       => $step['fromDate'] ?? null,
+                    'arrive'       => $step['finishDate'] ?? null,
+                    'duration_min' => (int) ($step['duration'] ?? 0),
+                    'distance_km'  => (int) ($step['totalDistance'] ?? 0),
+                    'start_price'  => self::toEgp($step['startingPrice'] ?? 0),
+                    'seats_open'   => (int) ($step['availableSeats'] ?? 0),
+                    'route_ids'    => array_values(array_filter(array_map(
+                        fn ($r) => (string) ($r['id'] ?? ''),
+                        $step['route'] ?? []
+                    ))),
+                    'classes'      => self::classes($train['servicePoints'] ?? []),
+                ];
+            }
+        }
+
+        return array_values($trains);
+    }
+
+    /** يجمّع عربيات القطر حسب الدرجة: سعر الدرجة + الكراسي الفاضية بأرقامها. */
+    private static function classes(array $servicePoints): array
+    {
+        $classes = [];
+
+        foreach ($servicePoints as $sp) {
+            $class = $sp['coachClass'] ?? [];
+            $id    = (string) ($class['id'] ?? ($sp['name'] ?? ''));
+
+            $free = [];
+            foreach (($sp['places'] ?? []) as $p) {
+                if (($p['params']['kind'] ?? 'seat') === 'seat' && ($p['available'] ?? false)) {
+                    $free[] = (string) ($p['number'] ?? '');
+                }
+            }
+            usort($free, fn ($a, $b) => (int) $a <=> (int) $b);
+
+            $classes[$id] ??= [
+                'name'    => self::loc($class)['ar'] ?? ($class['params']['ar'] ?? '—'),
+                'price'   => self::toEgp($sp['cost'] ?? 0),
+                'seats'   => 0,
+                'coaches' => [],
+            ];
+            $classes[$id]['seats'] += count($free);
+            if ($free) {
+                $classes[$id]['coaches'][] = ['coach' => (string) ($sp['name'] ?? ''), 'seats' => $free];
+            }
+        }
+
+        foreach ($classes as &$c) {
+            usort($c['coaches'], fn ($a, $b) => (int) $a['coach'] <=> (int) $b['coach']);
+        }
+        unset($c);
+
+        $classes = array_values($classes);
+        usort($classes, fn ($a, $b) => $b['price'] <=> $a['price']);
+
+        return $classes;
+    }
+
+    /** وصف القطر بالعربي (ثالثة تهوية / خاص...) من fields. */
+    private static function trainName(array $train): ?string
+    {
+        foreach (($train['fields'] ?? []) as $f) {
+            if (($f['key'] ?? '') === 'enr_train_description') {
+                return $f['params']['ar'] ?? self::loc($f)['ar'] ?? null;
+            }
+        }
+
+        return null;
+    }
+
     private static function trainType(array $train): ?string
     {
         foreach (($train['fields'] ?? []) as $f) {
