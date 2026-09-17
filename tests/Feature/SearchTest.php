@@ -24,9 +24,8 @@ class SearchTest extends TestCase
         $this->get('/')
             ->assertOk()
             ->assertSee('value="'.now()->addDay()->toDateString().'"', false)
-            // النهاردة مينفعش يتاخد من المنتقي — ENR مش بتبيع لنفس اليوم
-            ->assertSee('min="'.now()->addDay()->toDateString().'"', false)
-            ->assertDontSee('min="'.now()->toDateString().'"', false);
+            // النهاردة مسموح في المنتقي (بيوري الجدول)، بس الافتراضي بكرة عشان الكراسي تبان
+            ->assertSee('min="'.now()->toDateString().'"', false);
     }
 
     public function test_past_dates_are_refused_before_any_enr_call(): void
@@ -53,6 +52,7 @@ class SearchTest extends TestCase
         $page->assertSee('قطر ١٦٣')                    // القطر ظاهر
             ->assertSee('٦٥ جنيه')                     // السعر حقيقي
             ->assertSee('الجدول الأسبوعي')              // الزائر عارف إن دي مواعيد متكررة
+            ->assertSee('بتبان قبل الرحلة بيوم')         // ومعرفه إمتى يشوف الكراسي
             ->assertSee('التوفّر مش متاح للنهاردة')      // مفيش أي رقم كراسي
             ->assertDontSee('<summary>', false)     // أسماء الكلاسات موجودة في الـ CSS، فبنختبر الماركب
             ->assertDontSee('class="seat"', false);

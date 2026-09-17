@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#1d4ed8" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b1020" media="(prefers-color-scheme: dark)">
 <title>@yield('title', 'EgTrain')</title>
@@ -24,7 +24,10 @@
     }
 }
 * { box-sizing:border-box; }
-html { -webkit-text-size-adjust:100%; }
+html {
+    -webkit-text-size-adjust:100%;
+    touch-action:pan-x pan-y;          /* يقفل الزوم بالقرص والدبل-تاب، والتمرير شغال عادي */
+}
 body {
     margin:0; background:var(--bg); color:var(--ink);
     font:400 16px/1.65 "IBM Plex Sans Arabic", system-ui, -apple-system, sans-serif;
@@ -70,7 +73,7 @@ form.card { padding:18px; }
 .field:last-of-type { margin-bottom:17px; }
 label.lbl { display:block; font-size:12.5px; font-weight:600; color:var(--ink-3); margin-bottom:6px; letter-spacing:.01em; }
 input, select {
-    width:100%; padding:12px 13px; font:inherit; font-size:15.5px; color:var(--ink);
+    width:100%; padding:12px 13px; font:inherit; font-size:16px; color:var(--ink);
     background:var(--bg); border:1px solid var(--line); border-radius:12px; transition:border-color .15s, box-shadow .15s;
 }
 select {
@@ -177,6 +180,28 @@ details[open] summary::before { content:"－"; }
 .note { padding:16px 18px; color:var(--ink-2); font-size:14.5px; }
 footer { max-width:760px; margin:0 auto; padding:8px 18px 40px; color:var(--ink-3); font-size:12px;
     line-height:1.7; text-align:center; }
+
+/* الموبايل الضيق: حقلين المحطة جنب بعض مكانش بيسع اسم محطة عربي */
+@media (max-width: 480px) {
+    main { padding:18px 14px 44px; }
+    header .bar, footer { padding-inline:14px; }
+    .two { display:block; }
+    .two .field { margin-bottom:13px; }
+    .stop-t span { white-space:normal; }          /* اسم المحطة يلف بدل ما يتقص */
+    .rail { gap:8px; }
+    .rail .mid span { padding:0 5px; }
+    .train, form.card { padding:15px; }
+    .thead { gap:8px; }
+    .tno { font-size:18px; }
+    .price b { font-size:17px; }
+}
+
+/* شاشات صغيرة جدًا */
+@media (max-width: 340px) {
+    .rail { flex-wrap:wrap; }
+    .rail .mid { order:3; flex-basis:100%; margin-top:6px; }
+    .rail .mid::before { display:none; }
+}
 </style>
 </head>
 <body>
