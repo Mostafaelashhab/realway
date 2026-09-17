@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Support\DevMode;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
@@ -47,7 +48,7 @@ class SearchTest extends TestCase
         Http::fake(['obs.enr.gov.eg/*' => Http::response($this->enrPayload())]);
         $this->seedStoredTrip();
 
-        $page = $this->get('/search?'.$this->cairoToAlex(now()->toDateString()))->assertOk();
+        $page = $this->asDev()->get('/search?'.$this->cairoToAlex(now()->toDateString()))->assertOk();
 
         $page->assertSee('قطر ١٦٣')                    // القطر ظاهر
             ->assertSee('٦٥ جنيه')                     // السعر حقيقي
@@ -66,7 +67,7 @@ class SearchTest extends TestCase
         Http::fake(['obs.enr.gov.eg/*' => Http::response($this->enrPayload())]);
         $this->seedStoredTrip();
 
-        $this->get('/search?'.$this->cairoToAlex(now()->addWeek()->toDateString()))
+        $this->asDev()->get('/search?'.$this->cairoToAlex(now()->addWeek()->toDateString()))
             ->assertOk()
             ->assertSee('فاضي كرسيين')
             ->assertSee('عربية ٨')
@@ -78,7 +79,7 @@ class SearchTest extends TestCase
         Http::fake(['obs.enr.gov.eg/*' => Http::response('', 503)]);
         $this->seedStoredTrip();
 
-        $this->get('/search?'.$this->cairoToAlex(now()->addWeek()->toDateString()))
+        $this->asDev()->get('/search?'.$this->cairoToAlex(now()->addWeek()->toDateString()))
             ->assertOk()
             ->assertSee('قطر ٩٠٣')
             ->assertSee('القاهرة')
@@ -132,6 +133,74 @@ class SearchTest extends TestCase
             ->assertSee('from='.urlencode('القاهرة'), false);
 
         Http::assertNothingSent();
+    }
+
+    public function test_seats_are_never_mentioned_without_the_dev_key(): void
+    {
+        Http::fake(['obs.enr.gov.eg/*' => Http::response($this->enrPayload())]);
+        $this->seedStoredTrip();
+
+        $this->get('/search?'.$this->cairoToAlex(now()->addWeek()->toDateString()))
+            ->assertOk()
+            ->assertSee('قطر ١٦٣')            // المواعيد والأسعار زي ما هي
+            ->assertSee('٦٥ جنيه')
+            ->assertDontSee('كرسي')            // ولا كلمة عن الكراسي
+            ->assertDontSee('كراسي')
+            ->assertDontSee('التوفّر')
+            ->assertDontSee('عربية')
+            ->assertDontSee('class="seat"', false);
+
+        $this->get('/')->assertOk()->assertDontSee('كراسي');
+    }
+
+    public function test_a_wrong_key_neither_unlocks_nor_is_remembered(): void
+    {
+        config(['egtrain.dev_key' => 'right-key']);
+
+        $this->post('/dev', ['key' => 'wrong-key'])
+            ->assertRedirect(route('home').'#dev')
+            ->assertSessionHas('devError')
+            ->assertCookieMissing(DevMode::COOKIE);
+    }
+
+    public function test_the_right_key_unlocks_and_the_browser_remembers_it(): void
+    {
+        config(['egtrain.dev_key' => 'right-key']);
+        Http::fake(['obs.enr.gov.eg/*' => Http::response($this->enrPayload())]);
+        $this->seedStoredTrip();
+
+        $this->post('/dev', ['key' => 'right-key'])
+            ->assertRedirect(route('home'))
+            ->assertCookie(DevMode::COOKIE, 'right-key');
+
+        // نفس الكوكي بيفتح الكراسي في أي طلب بعد كده من غير ما يسأل تاني
+        $this->withCookie(DevMode::COOKIE, 'right-key')
+            ->get('/search?'.$this->cairoToAlex(now()->addWeek()->toDateString()))
+            ->assertOk()
+            ->assertSee('فاضي كرسيين')
+            ->assertSee('عربية ٨');
+    }
+
+    public function test_an_unset_key_keeps_the_feature_closed_for_everyone(): void
+    {
+        config(['egtrain.dev_key' => null]);
+        Http::fake(['obs.enr.gov.eg/*' => Http::response($this->enrPayload())]);
+        $this->seedStoredTrip();
+
+        // حتى لو حد بعت كوكي فاضية أو أي قيمة
+        $this->withCookie(DevMode::COOKIE, '')
+            ->get('/search?'.$this->cairoToAlex(now()->addWeek()->toDateString()))
+            ->assertOk()->assertDontSee('كرسي');
+
+        $this->get('/')->assertOk()->assertDontSee('كن مطوّر');
+    }
+
+    /** طلب بمفتاح مطوّر صالح. */
+    private function asDev(): self
+    {
+        config(['egtrain.dev_key' => 'test-key']);
+
+        return $this->withCookie(DevMode::COOKIE, 'test-key');
     }
 
     private function cairoToAlex(string $date): string

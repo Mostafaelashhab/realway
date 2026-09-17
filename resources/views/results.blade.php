@@ -34,17 +34,20 @@
     <div class="card banner warn">
         <b>نظام السكة الحديد مش راد دلوقتي</b>
         دي مواعيد محفوظة عندنا من الجدول الأسبوعي@if ($fallbackAt) (آخر تحديث {{ Ar::date($fallbackAt) }})@endif —
-        ممكن تكون اتغيّرت، و<b>الأسعار التفصيلية والكراسي مش متاحة</b> من غير النظام.
+        ممكن تكون اتغيّرت، و<b>الأسعار التفصيلية مش متاحة</b> من غير النظام.
         جرّب تاني بعد شوية.
     </div>
 @endif
 
 @if ($scheduleOnly && $trains)
     <div class="card banner">
-        <b>الكراسي الفاضية بتبان قبل الرحلة بيوم.</b>
-        السكة الحديد بتقفل الحجز أونلاين لنفس اليوم، فمفيش توفّر للنهاردة —
-        دوّر بتاريخ بكرة أو بعده وهتشوف الكراسي وأرقامها.
-        المواعيد والدرجات والأسعار اللي تحت حقيقية، مأخوذة من الجدول الأسبوعي (نفس اليوم الأسبوع الجاي).
+        {{-- مصدر المواعيد لازم يبان لأي حد، بمفتاح أو من غيره --}}
+        <b>دي مواعيد الجدول الأسبوعي.</b>
+        السكة الحديد بتقفل الحجز أونلاين لنفس اليوم، فالمواعيد دي مأخوذة من نفس اليوم
+        الأسبوع الجاي — المواعيد والدرجات والأسعار حقيقية.
+        @if ($dev)
+            <b>الكراسي الفاضية بتبان قبل الرحلة بيوم</b>، فدوّر بتاريخ بكرة أو بعده عشان تشوفها وتشوف أرقامها.
+        @endif
     </div>
 @endif
 
@@ -78,16 +81,18 @@
             <div class="cls">
                 <div class="cls-h">
                     <b>{{ $c['name'] }}</b>
-                    @if ($c['seats'] === null)
-                        <span class="free none">{{ $fallback ? 'التوفّر مش متاح' : 'التوفّر مش متاح للنهاردة' }}</span>
-                    @elseif ($c['seats'] === 0)
-                        <span class="free none">مفيش كراسي فاضية</span>
-                    @else
-                        <span class="free">فاضي {{ Ar::count($c['seats'], 'كرسي واحد', 'كرسيين', 'كراسي', 'كرسي') }}</span>
+                    @if ($dev)
+                        @if ($c['seats'] === null)
+                            <span class="free none">{{ $fallback ? 'التوفّر مش متاح' : 'التوفّر مش متاح للنهاردة' }}</span>
+                        @elseif ($c['seats'] === 0)
+                            <span class="free none">مفيش كراسي فاضية</span>
+                        @else
+                            <span class="free">فاضي {{ Ar::count($c['seats'], 'كرسي واحد', 'كرسيين', 'كراسي', 'كرسي') }}</span>
+                        @endif
                     @endif
                     @if ($c['price'] !== null)<span class="pr">{{ Ar::money($c['price']) }}</span>@endif
                 </div>
-                @foreach ($c['coaches'] as $coach)
+                @foreach ($dev ? $c['coaches'] : [] as $coach)
                     <details>
                         <summary>عربية {{ Ar::num($coach['coach']) }} — {{ Ar::count(count($coach['seats']), 'كرسي واحد', 'كرسيين', 'كراسي', 'كرسي') }}</summary>
                         <div class="seatgrid">

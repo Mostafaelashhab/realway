@@ -191,6 +191,27 @@ details[open] summary::before { content:"－"; }
     border-inline-start:3px solid var(--brand); }
 .banner b { color:var(--ink); font-weight:600; }
 .banner.warn { border-inline-start-color:#d97706; }
+/* وضع المطوّر */
+.dev-row { margin-top:24px; display:flex; align-items:center; justify-content:center; gap:10px; }
+.dev-row form { display:contents; }
+.dev-on { font-size:13px; color:var(--ok); font-weight:600; }
+.dev-link {
+    display:inline-block; width:auto; padding:7px 14px; font-size:13px; font-weight:500;
+    color:var(--ink-3); background:transparent; border:1px solid var(--line); border-radius:99px;
+    cursor:pointer; transition:color .15s, border-color .15s;
+}
+.dev-link:hover { color:var(--brand-ink); border-color:var(--brand); filter:none; }
+
+.modal { display:none; }
+.modal:target { display:flex; position:fixed; inset:0; z-index:60; align-items:center; justify-content:center; padding:20px; }
+.modal-back { position:absolute; inset:0; background:rgba(9,14,28,.6); backdrop-filter:blur(3px); }
+.modal-card { position:relative; width:100%; max-width:380px; padding:22px; animation:pop .16s ease-out; }
+.modal-title { font-size:18px; font-weight:700; margin:0 0 6px; letter-spacing:-.02em; }
+.modal-text { margin:0 0 16px; font-size:13.5px; color:var(--ink-2); line-height:1.7; }
+.modal-err { margin:0 0 14px; padding:9px 12px; border-radius:10px; font-size:13px;
+    background:color-mix(in srgb, #dc2626 12%, transparent); color:#dc2626; font-weight:600; }
+.modal-cancel { display:block; text-align:center; margin-top:12px; font-size:13px; color:var(--ink-3); }
+
 .note { padding:16px 18px; color:var(--ink-2); font-size:14.5px; }
 footer { max-width:760px; margin:0 auto; padding:8px 18px 40px; color:var(--ink-3); font-size:12px;
     line-height:1.7; text-align:center; }
@@ -236,7 +257,7 @@ footer { max-width:760px; margin:0 auto; padding:8px 18px 40px; color:var(--ink-
 <main>@yield('content')</main>
 
 <footer>
-    تطبيق مستقل غير رسمي — الأسعار والكراسي الفاضية بتيجي من نظام حجز السكة الحديد لحظة البحث، والحجز من المصدر الرسمي.
+    تطبيق مستقل غير رسمي — المواعيد والأسعار بتيجي من نظام حجز السكة الحديد لحظة البحث، والحجز من المصدر الرسمي.
 </footer>
 </body>
 </html>
