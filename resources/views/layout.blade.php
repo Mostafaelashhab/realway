@@ -88,6 +88,41 @@ button {
 }
 button:hover { filter:brightness(1.08); }
 button:active { transform:scale(.985); }
+button:disabled { cursor:progress; filter:none; opacity:.92; }
+button.is-loading { display:flex; align-items:center; justify-content:center; gap:9px; }
+button.is-loading::before {
+    content:""; width:15px; height:15px; border-radius:50%; flex:none;
+    border:2px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin .6s linear infinite;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+body.busy { cursor:progress; }
+/* شريط تقدّم رفيع تحت الهيدر طول ما البحث شغال */
+body.busy::after {
+    content:""; position:fixed; inset-inline:0; top:0; height:3px; z-index:50;
+    background:linear-gradient(90deg, transparent, var(--brand), transparent);
+    animation:sweep 1.1s ease-in-out infinite;
+}
+@keyframes sweep { from { transform:translateX(-100%); } to { transform:translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+    button.is-loading::before, body.busy::after { animation-duration:0s; }
+}
+
+/* قايمة المحطات المنسّقة */
+.combo { position:relative; }
+.combo-panel {
+    display:none; position:absolute; z-index:20; inset-inline:0; top:100%; margin-top:6px;
+    background:var(--card); border:1px solid var(--line); border-radius:13px; overflow:hidden;
+    max-height:none; box-shadow:0 12px 34px -12px rgba(15,23,42,.35), 0 0 0 1px rgba(15,23,42,.02);
+    animation:pop .13s ease-out;
+}
+.combo-panel.open { display:block; }
+@keyframes pop { from { opacity:0; transform:translateY(-5px); } }
+.combo-item {
+    padding:11px 14px; font-size:15px; cursor:pointer; border-bottom:1px solid var(--line);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.combo-item:last-child { border-bottom:0; }
+.combo-item:hover, .combo-item.active { background:var(--brand-soft); color:var(--brand-ink); font-weight:600; }
 
 /* نتيجة القطر */
 .train { padding:18px; margin-bottom:14px; }
@@ -129,6 +164,16 @@ details[open] summary::before { content:"－"; }
 .stops span { padding:4px 10px; border-radius:99px; font-size:13px; background:var(--bg); border:1px solid var(--line); color:var(--ink-2); }
 .stops span.edge { background:var(--brand-soft); border-color:transparent; color:var(--brand-ink); font-weight:600; }
 
+.editbox { margin-bottom:18px; padding:4px 14px 14px; }
+.edit-summary { padding:12px 2px; font-weight:600; color:var(--ink-2); }
+.edit-summary::before { content:"⌕"; font-size:15px; }
+.editbox .tabbar, .editbox form.card { box-shadow:none; }
+.pick { padding:5px 12px; border-radius:99px; font-size:13.5px; background:var(--brand-soft);
+    color:var(--brand-ink); font-weight:500; }
+.banner { padding:14px 16px; margin-bottom:14px; font-size:13.5px; line-height:1.7; color:var(--ink-2);
+    border-inline-start:3px solid var(--brand); }
+.banner b { color:var(--ink); font-weight:600; }
+.banner.warn { border-inline-start-color:#d97706; }
 .note { padding:16px 18px; color:var(--ink-2); font-size:14.5px; }
 footer { max-width:760px; margin:0 auto; padding:8px 18px 40px; color:var(--ink-3); font-size:12px;
     line-height:1.7; text-align:center; }

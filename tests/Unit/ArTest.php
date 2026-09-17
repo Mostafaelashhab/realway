@@ -38,6 +38,15 @@ class ArTest extends TestCase
         $this->assertSame('١١ محطة', Ar::count(11, ...$args));
     }
 
+    public function test_folding_makes_arabic_spelling_variants_match(): void
+    {
+        $this->assertSame(Ar::fold('القاهره'), Ar::fold('القاهرة'));     // ة مقابل ه
+        $this->assertSame(Ar::fold('اسوان'), Ar::fold('أسوان'));          // همزة
+        $this->assertSame(Ar::fold('سيدي جابر'), Ar::fold('سيدى جابر'));  // ى مقابل ي
+        $this->assertSame(Ar::fold('طنطا'), Ar::fold('  طنطا  '));        // مسافات
+        $this->assertSame('الاسكندريه', Ar::fold('الإسكندريّة'));         // تشكيل
+    }
+
     public function test_date_is_spelled_out_to_survive_rtl(): void
     {
         $this->assertSame('الجمعة ١٨ سبتمبر ٢٠٢٦', Ar::date('2026-09-18'));

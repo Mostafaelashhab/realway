@@ -10,6 +10,23 @@ class Ar
         '5' => '٥', '6' => '٦', '7' => '٧', '8' => '٨', '9' => '٩',
     ];
 
+    /**
+     * تطبيع عربي للمطابقة: همزات، ة/ه، ى/ي، تشكيل، ال التعريف، مسافات.
+     * الناس بتكتب "القاهرة" والداتا فيها "القاهره" — لازم الاتنين يطابقوا.
+     */
+    public static function fold(string $text): string
+    {
+        $text = strtr($text, [
+            'أ' => 'ا', 'إ' => 'ا', 'آ' => 'ا', 'ٱ' => 'ا',
+            'ة' => 'ه', 'ى' => 'ي', 'ؤ' => 'و', 'ئ' => 'ي', 'ء' => '',
+        ]);
+        $text = preg_replace('/[\x{0640}\x{064B}-\x{0652}]/u', '', $text);   // تطويل وتشكيل
+        $text = self::west($text);
+        $text = preg_replace('/\s+/u', ' ', $text);
+
+        return trim(mb_strtolower($text));
+    }
+
     /** أرقام إنجليزية → هندية. */
     public static function num(int|float|string|null $v): string
     {

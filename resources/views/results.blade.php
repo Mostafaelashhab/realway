@@ -5,13 +5,47 @@
 @php use App\Support\Ar; @endphp
 
 @section('content')
+<details class="card editbox" @if ($error) open @endif>
+    <summary class="edit-summary">تعديل البحث</summary>
+    <div style="padding:0 2px 2px">@include('_search')</div>
+</details>
+
 <div class="hero">
     <h1>{{ $title }}</h1>
     <p>{{ Ar::date($date) }}@if (count($trains) > 1) — {{ Ar::count(count($trains), '', 'قطرين', 'قطارات', 'قطر') }}@endif</p>
 </div>
 
 @if ($error)
-    <p class="card note">{{ $error }}</p>
+    <div class="card note">
+        {{ $error }}
+        @if ($suggest)
+            <div class="sect" style="margin:12px 0 7px">تقصد واحدة من دول؟</div>
+            <div class="stops">
+                @foreach ($suggest as $name)
+                    @php $fix = ['from' => $fromText, 'to' => $toText, 'date' => $date]; $fix[$suggestField] = $name; @endphp
+                    <a class="pick" href="{{ route('search', $fix) }}">{{ $name }}</a>
+                @endforeach
+            </div>
+        @endif
+    </div>
+@endif
+
+@if ($fallback)
+    <div class="card banner warn">
+        <b>نظام السكة الحديد مش راد دلوقتي</b>
+        دي مواعيد محفوظة عندنا من الجدول الأسبوعي@if ($fallbackAt) (آخر تحديث {{ Ar::date($fallbackAt) }})@endif —
+        ممكن تكون اتغيّرت، و<b>الأسعار التفصيلية والكراسي مش متاحة</b> من غير النظام.
+        جرّب تاني بعد شوية.
+    </div>
+@endif
+
+@if ($scheduleOnly && $trains)
+    <div class="card banner">
+        <b>دي مواعيد الجدول الأسبوعي</b>
+        السكة الحديد بتقفل الحجز أونلاين لنفس اليوم، فالمواعيد دي مأخوذة من نفس اليوم
+        الأسبوع الجاي — المواعيد والدرجات والأسعار حقيقية، إنما <b>الكراسي الفاضية مش متاحة للنهاردة</b>.
+        للحجز والتوفّر، ابحث من بكرة وبعده.
+    </div>
 @endif
 
 @foreach ($trains as $t)
@@ -44,12 +78,14 @@
             <div class="cls">
                 <div class="cls-h">
                     <b>{{ $c['name'] }}</b>
-                    @if ($c['seats'] === 0)
+                    @if ($c['seats'] === null)
+                        <span class="free none">{{ $fallback ? 'التوفّر مش متاح' : 'التوفّر مش متاح للنهاردة' }}</span>
+                    @elseif ($c['seats'] === 0)
                         <span class="free none">مفيش كراسي فاضية</span>
                     @else
                         <span class="free">فاضي {{ Ar::count($c['seats'], 'كرسي واحد', 'كرسيين', 'كراسي', 'كرسي') }}</span>
                     @endif
-                    <span class="pr">{{ Ar::money($c['price']) }}</span>
+                    @if ($c['price'] !== null)<span class="pr">{{ Ar::money($c['price']) }}</span>@endif
                 </div>
                 @foreach ($c['coaches'] as $coach)
                     <details>
