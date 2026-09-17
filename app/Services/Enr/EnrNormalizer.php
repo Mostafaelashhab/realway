@@ -222,14 +222,20 @@ class EnrNormalizer
             }
             usort($free, fn ($a, $b) => (int) $a <=> (int) $b);
 
+            // ENR بيرجّع places فاضية أحيانًا (زي ما بيعمل مع skip_places_information)؛
+            // ساعتها الأرقام مش متاحة بس العدد لسه موجود في seatCount/availableSeats.
+            $count = $free !== []
+                ? count($free)
+                : (int) ($sp['params']['seatCount'] ?? count($sp['availableSeats'] ?? []));
+
             $classes[$id] ??= [
                 'name'    => self::loc($class)['ar'] ?? ($class['params']['ar'] ?? '—'),
                 'price'   => self::toEgp($sp['cost'] ?? 0),
                 'seats'   => 0,
                 'coaches' => [],
             ];
-            $classes[$id]['seats'] += count($free);
-            if ($free) {
+            $classes[$id]['seats'] += $count;
+            if ($free !== []) {
                 $classes[$id]['coaches'][] = ['coach' => (string) ($sp['name'] ?? ''), 'seats' => $free];
             }
         }

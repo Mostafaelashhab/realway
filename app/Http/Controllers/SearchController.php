@@ -12,11 +12,18 @@ use Illuminate\Support\Facades\DB;
 
 class SearchController extends Controller
 {
+    private const TOO_EARLY = 'السكة الحديد بتعرض المواعيد من بكرة وبعده — اختار تاريخ أبعد.';
+
+    private const ENR_DOWN = 'نظام السكة الحديد مش راد دلوقتي — جرّب تاني بعد شوية.';
+
+    /** اتحط لو نداء ENR نفسه فشل، عشان نفرّق بين العطل و"مفيش قطارات". */
+    private bool $enrDown = false;
+
     public function home()
     {
         return view('home', [
             'stations' => $this->stations(),
-            'date'     => now()->toDateString(),
+            'date'     => self::firstServedDate(),
         ]);
     }
 
@@ -32,12 +39,14 @@ class SearchController extends Controller
             $error = 'اختار محطة القيام ومحطة الوصول.';
         } elseif ($from === $to) {
             $error = 'المحطتين واحدة — غيّر واحدة منهم.';
+        } elseif ($this->tooEarly($date)) {
+            $error = self::TOO_EARLY;
         }
 
         $trains = $error ? [] : $this->live($client, $from, $to, $date);
 
         if (! $error && ! $trains) {
-            $error = 'مفيش قطارات على الخط ده في التاريخ ده.';
+            $error = $this->enrDown ? self::ENR_DOWN : 'مفيش قطارات على الخط ده في التاريخ ده.';
         }
 
         return view('results', [
@@ -59,6 +68,8 @@ class SearchController extends Controller
 
         if ($number === '') {
             $error = 'اكتب رقم القطر.';
+        } elseif ($this->tooEarly($date)) {
+            $error = self::TOO_EARLY;
         } else {
             // أطول خط معروف للقطر ده (عشان نجيب كل محطاته)
             $route = DB::table('trips')
@@ -75,7 +86,9 @@ class SearchController extends Controller
                 ));
 
                 if (! $trains) {
-                    $error = 'القطر رقم '.Ar::num($number).' مش مشغّل في التاريخ ده.';
+                    $error = $this->enrDown
+                        ? self::ENR_DOWN
+                        : 'القطر رقم '.Ar::num($number).' مش مشغّل في التاريخ ده.';
                 }
             }
         }
@@ -98,11 +111,18 @@ class SearchController extends Controller
             return [];
         }
 
-        $raw = Cache::remember(
-            "enr:$from:$to:$date",
-            now()->addMinutes(2),
-            fn () => $client->search($from, $to, $date)
-        );
+        $key = "enr:$from:$to:$date";
+        $raw = Cache::get($key);
+        if ($raw === null) {
+            $raw = $client->trySearch($from, $to, $date);
+            if ($raw === null) {
+                $this->enrDown = true;                   // النداء نفسه فشل — مش نفس "مفيش قطارات"
+                return [];
+            }
+            if ($raw !== []) {
+                Cache::put($key, $raw, now()->addMinutes(2));
+            }
+        }
 
         $trains = EnrNormalizer::trains($raw);
         if (! $trains) {
@@ -130,7 +150,18 @@ class SearchController extends Controller
     {
         $date = (string) $request->query('date', '');
 
-        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) ? $date : now()->toDateString();
+        return preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) ? $date : self::firstServedDate();
+    }
+
+    /** ENR بيرجّع فاضي للنهاردة واللي فات — الحجز بيفتح من بكرة. */
+    public static function firstServedDate(): string
+    {
+        return now()->addDay()->toDateString();
+    }
+
+    private function tooEarly(string $date): bool
+    {
+        return $date < self::firstServedDate();
     }
 
     private function name(string $id): string

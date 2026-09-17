@@ -39,7 +39,7 @@
         </div>
         <div class="field">
             <label class="lbl" for="d1">التاريخ</label>
-            <input type="date" name="date" id="d1" value="{{ $date }}">
+            <input type="date" name="date" id="d1" value="{{ $date }}" min="{{ $date }}">
         </div>
         <button type="submit">ابحث</button>
     </form>
@@ -51,7 +51,7 @@
         </div>
         <div class="field">
             <label class="lbl" for="d2">التاريخ</label>
-            <input type="date" name="date" id="d2" value="{{ $date }}">
+            <input type="date" name="date" id="d2" value="{{ $date }}" min="{{ $date }}">
         </div>
         <button type="submit">ابحث</button>
     </form>
